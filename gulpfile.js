@@ -74,14 +74,14 @@ gulp.task("chrome-copy", () => {
 });
 
 gulp.task("chrome-rename", (cb) => {
-  fs.renameSync(
-    "dist/chrome/manifest.json",
-    "dist/chrome/firefox_manifest.json"
-  );
-  fs.renameSync(
-    "dist/chrome/chrome_manifest.json",
-    "dist/chrome/manifest.json"
-  );
+  // fs.renameSync(
+  //   "dist/chrome/manifest.json",
+  //   "dist/chrome/firefox_manifest.json"
+  // );
+  // fs.renameSync(
+  //   "dist/chrome/chrome_manifest.json",
+  //   "dist/chrome/manifest.json"
+  // );
   cb();
 });
 

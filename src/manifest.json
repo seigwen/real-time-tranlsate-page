@@ -5,67 +5,51 @@
   "description": "__MSG_extensionDescription__",
   "version": "9.6.1",
   "homepage_url": "https://github.com/FilipePS/Traduzir-paginas-web",
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "{036a55b4-5e72-4d05-a06c-cba2dfcc134a}",
-      "strict_min_version": "63.0"
-    }
-  },
+  "update_url": "https://raw.githubusercontent.com/FilipePS/Traduzir-paginas-web/master/updates.xml",
+  
   "commands": {
-    "hotkey-toggle-translation": {
-      "suggested_key": {
-        "default": "Ctrl+Alt+T"
-      },
-      "description": "__MSG_lblSwitchTranslatedAndOriginal__"
-    },
-    "hotkey-translate-selected-text": {
-      "suggested_key": {
-        "default": "Ctrl+Alt+S"
-      },
-      "description": "__MSG_msgTranslateSelectedText__"
-    },
-    "hotkey-swap-page-translation-service": {
-      "suggested_key": {
-        "default": "Ctrl+Alt+Q"
-      },
-      "description": "__MSG_swapTranslationService__"
-    },
-    "hotkey-show-original": {
-      "suggested_key": {
-        "default": "Shift+Alt+0"
-      },
-      "description": "__MSG_lblRestorePageToOriginal__"
-    },
-    "hotkey-translate-page-1": {
-      "suggested_key": {
-        "default": "Shift+Alt+1"
-      },
-      "description": "__MSG_lblTranslatePageToTargetLanguage__ 1"
-    },
-    "hotkey-translate-page-2": {
-      "suggested_key": {
-        "default": "Shift+Alt+2"
-      },
-      "description": "__MSG_lblTranslatePageToTargetLanguage__ 2"
-    },
-    "hotkey-translate-page-3": {
-      "suggested_key": {
-        "default": "Shift+Alt+3"
-      },
-      "description": "__MSG_lblTranslatePageToTargetLanguage__ 3"
-    },
-    "hotkey-hot-translate-selected-text": {
-      "suggested_key": {
-        "default": "Ctrl+Alt+X"
-      },
-      "description": "__MSG_lblHotTranslatedSelectedText__"
-    }
+    // "hotkey-toggle-translation": {
+    //   "suggested_key": {
+    //     "default": "Alt+T"
+    //   },
+    //   "description": "__MSG_lblSwitchTranslatedAndOriginal__"
+    // },
+    // "hotkey-translate-selected-text": {
+    //   "suggested_key": {
+    //     "default": "Alt+S"
+    //   },
+    //   "description": "__MSG_msgTranslateSelectedText__"
+    // },
+    // "hotkey-swap-page-translation-service": {
+    //   "suggested_key": {
+    //     "default": "Alt+Q"
+    //   },
+    //   "description": "__MSG_swapTranslationService__"
+    // }
+    // ,
+    // "hotkey-show-original": {
+    //   "description": "__MSG_lblRestorePageToOriginal__"
+    // },
+    // "hotkey-translate-page-1": {
+    //   "description": "__MSG_lblTranslatePageToTargetLanguage__ 1"
+    // },
+    // "hotkey-translate-page-2": {
+    //   "description": "__MSG_lblTranslatePageToTargetLanguage__ 2"
+    // },
+    // "hotkey-translate-page-3": {
+    //   "description": "__MSG_lblTranslatePageToTargetLanguage__ 3"
+    // },
+    // "hotkey-hot-translate-selected-text": {
+    //   "description": "__MSG_lblHotTranslatedSelectedText__"
+    // }
   },
+
   "icons": {
     "32": "/icons/icon-32.png",
     "64": "/icons/icon-64.png",
     "128": "/icons/icon-128.png"
   },
+
   "permissions": [
     "<all_urls>",
     "storage",
@@ -73,7 +57,9 @@
     "contextMenus",
     "webRequest"
   ],
+
   "optional_permissions": ["webNavigation"],
+
   "web_accessible_resources": [
     "/icons/icon-32.png",
     "/icons/google-translate-32.png",
@@ -81,21 +67,19 @@
     "/icons/swap-32.png",
     "/contentScript/css/*"
   ],
+
   "options_ui": {
     "page": "/options/options.html",
     "open_in_tab": false,
     "browser_style": false
   },
+
   "browser_action": {
     "browser_style": false,
     "default_icon": "/icons/icon-32.png",
     "default_title": "__MSG_pageActionTitle__"
   },
-  "page_action": {
-    "browser_style": false,
-    "default_icon": "/icons/icon-32.png",
-    "default_title": "__MSG_pageActionTitle__"
-  },
+
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
@@ -136,6 +120,7 @@
       "js": ["/contentScript/deepl.js"]
     }
   ],
+
   "background": {
     "persistent": true,
     "scripts": [
