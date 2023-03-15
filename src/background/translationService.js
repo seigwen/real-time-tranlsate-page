@@ -439,7 +439,8 @@ const translationService = (function () {
     /**
      * Receives the `sourceArray2d` parameter and prepares the requests.
      * Calls `cbTransformRequest` for each `sourceArray` of `sourceArray2d`.
-     * The `currentTranslationsInProgress` array will be the **final result** with requests already completed or in progress. And the `requests` array will only contain the new requests that need to be made.
+     * The `currentTranslationsInProgress` array will be the **final result** with requests already completed or in progress. 
+     * And the `requests` array will only contain the new requests that need to be made.
      *
      * Checks if there is already an identical request in progress or if it is already in the translation cache.
      * If it doesn't exist, add it to `requests` to make a new *http request*.
@@ -596,6 +597,7 @@ const translationService = (function () {
       dontSaveInPersistentCache = false,
       dontSortResults = false
     ) {
+      // 准备requests数组
       const [requests, currentTranslationsInProgress] = await this.getRequests(
         sourceLanguage,
         targetLanguage,
@@ -603,7 +605,7 @@ const translationService = (function () {
       );
       /** @type {Promise<void>[]} */
       const promises = [];
-
+      // 发出所有request数组里的所有request
       for (const request of requests) {
         promises.push(
           this.makeRequest(sourceLanguage, targetLanguage, request)
@@ -1127,6 +1129,17 @@ const translationService = (function () {
     /** @type {Service} */ /** @type {?} */ (deeplService)
   );
 
+  /**
+   * 翻译HTML
+   * 
+   * @param {*} serviceName 
+   * @param {*} sourceLanguage 
+   * @param {*} targetLanguage 
+   * @param {*} sourceArray2d 
+   * @param {*} dontSaveInPersistentCache 
+   * @param {*} dontSortResults 
+   * @returns 
+   */
   translationService.translateHTML = async (
     serviceName,
     sourceLanguage,

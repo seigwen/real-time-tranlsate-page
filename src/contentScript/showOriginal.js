@@ -1,8 +1,23 @@
 "use strict";
 
-var showOriginal = {};
+/**
+ * 在已翻译页面悬停显示原文
+ */
+
+/**
+ * @type {{
+ *  enable:()=>void,
+ *  disable:()=>void,
+ *  add:()=>void,
+ *  removeAll:()=>void,
+ *  enabledObserverSubscribe:()=>void
+ *  isEnabled:boolean
+ * }}
+ */
+var showOriginal;
 
 twpConfig.onReady(function () {
+  // 移动平台上,不允许showOriginal的任何相关操作(悬停显示原文)
   if (platformInfo.isMobile.any) {
     showOriginal.enable = () => {};
     showOriginal.disable = () => {};

@@ -1,7 +1,16 @@
 "use strict";
 
+/**
+ * 在已翻译过但之后又显示原文的页面悬停显译文
+ */
+
+// 这个对象似乎没有地方用到?????
 var showTranslated = {};
 
+/**
+ * 获取tab主机名
+ * @returns 
+ */
 function getTabHostName() {
   return new Promise((resolve) =>
     chrome.runtime.sendMessage({ action: "getTabHostName" }, (result) =>
@@ -12,6 +21,7 @@ function getTabHostName() {
 
 Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
   const tabHostName = _[1];
+  // 移动平台上,不允许showOriginal的任何相关操作(悬停显示原文)
   if (platformInfo.isMobile.any) return;
 
   let styleTextContent = "";
@@ -35,28 +45,34 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     twpConfig.get("translateTextOverMouseWhenPressTwice") === "yes";
   let fooCount = 0;
 
+  // 监听配置变更事件, 以实时修改内存中的变量
   twpConfig.onChanged(function (name, newValue) {
     switch (name) {
+      // 翻译服务设置变更
       case "textTranslatorService":
         currentTextTranslatorService =
           newValue === "deepl" ? "google" : newValue;
         break;
+      // 目标语言设置变更
       case "targetLanguages":
         currentTargetLanguages = newValue;
         break;
       case "targetLanguageTextTranslation":
         currentTargetLanguage = newValue;
         break;
+      // 鼠标悬停翻译设置变更
       case "sitesToTranslateWhenHovering":
         showTranslatedTextWhenHoveringThisSite =
           newValue.indexOf(tabHostName) !== -1;
         updateEventListener();
         break;
+      // 
       case "langsToTranslateWhenHovering":
         showTranslatedTextWhenHoveringThisLang =
           newValue.indexOf(originalTabLanguage) !== -1;
         updateEventListener();
         break;
+      // 双击翻译设置变更
       case "translateTextOverMouseWhenPressTwice":
         translateTextOverMouseWhenPressTwice =
           twpConfig.get("translateTextOverMouseWhenPressTwice") === "yes";
@@ -95,8 +111,11 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
   if (twpConfig.get("translateTag_pre") !== "yes") {
     htmlTagsInlineIgnore.push("pre");
   }
+
+  // 监听配置变更事件, 以实时修改内存中的变量
   twpConfig.onChanged((name, newvalue) => {
     switch (name) {
+      // 是否翻译pre
       case "translateTag_pre":
         const index = htmlTagsInlineIgnore.indexOf("pre");
         if (index !== -1) {
@@ -146,6 +165,7 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     }
   }
 
+
   function onMouseDown(e) {
     if (e.target === divElement) return;
     if (divElement && divElement.contains(e.target)) return;
@@ -154,8 +174,16 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
 
   let isPlayingAudio = false;
 
-  function playAudio(text, targetLanguage, cbOnEnded = () => {}) {
+  /**
+   * 播放音频
+   * 
+   * @param {*} text 文字
+   * @param {*} targetLanguage  目标语言
+   * @param {*} cbOnEnded 音频播放完毕回调
+   */ 
+  function playAudio(text, targetLanguage, cbOnEnded = () => { }) {
     isPlayingAudio = true;
+    // 文字转语音
     chrome.runtime.sendMessage(
       {
         action: "textToSpeech",
@@ -183,6 +211,13 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
 
   let prevNode = null;
 
+  /**
+   * 翻译划词选择的节点
+   * 
+   * @param {*} node 
+   * @param {*} usePrevNode 
+   * @returns 
+   */
   function translateThisNode(node, usePrevNode = false) {
     fooCount++;
     let currentFooCount = fooCount;
@@ -262,6 +297,7 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
 
     if (!text || text.length < 1 || text.length > 1000) return;
 
+    // 翻译
     backgroundTranslateSingleText(
       currentTextTranslatorService,
       currentTargetLanguage,
@@ -281,6 +317,7 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
         } else {
           eTextTranslated.setAttribute("dir", "ltr");
         }
+        // 在翻译结果框显示翻译结果
         eTextTranslated.textContent = result;
 
         const eDivResult = shadowRoot.getElementById("eDivResult");
@@ -305,6 +342,12 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
       });
   }
 
+  /**
+   * 处理拖曳
+   * 
+   * @param {*} elmnt 
+   * @param {*} elmnt2 
+   */
   function dragElement(elmnt, elmnt2) {
     var pos1 = 0,
       pos2 = 0,
@@ -347,6 +390,11 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     }
   }
 
+  /**
+   * 初始化翻译结果框
+   * 
+   * @returns 
+   */
   function init() {
     destroy();
     if (window.isTranslatingSelected) return;
@@ -360,8 +408,8 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     });
     shadowRoot.innerHTML = `
         <link rel="stylesheet" href="${chrome.runtime.getURL(
-          "/contentScript/css/showTranslated.css"
-        )}">
+      "/contentScript/css/showTranslated.css"
+    )}">
 
         <div id="eDivResult">
                 <div id="eTextTranslated" dir="auto"></div>
@@ -640,6 +688,9 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     });
   }
 
+  /**
+   * 销毁翻译结果框
+   */
   function destroy() {
     fooCount++;
     stopAudio();

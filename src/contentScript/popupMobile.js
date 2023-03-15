@@ -1,7 +1,15 @@
 "use strict";
 
+/**
+ * 在移动平台上显示的弹出窗口
+ */
+
 var popupMobile = {};
 
+/**
+ * 获取tab的主机名
+ * @returns 
+ */
 function getTabHostName() {
   return new Promise((resolve) =>
     chrome.runtime.sendMessage({ action: "getTabHostName" }, (result) =>
@@ -12,6 +20,7 @@ function getTabHostName() {
 
 Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
   const tabHostName = _[1];
+  // 非移动平台, 退出本JS
   if (!platformInfo.isMobile.any) return;
 
   const htmlMobile = `
@@ -53,23 +62,27 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
   let originalTabLanguage = "und";
   let currentTargetLanguage = twpConfig.get("targetLanguage");
   let currentPageTranslatorService = twpConfig.get("pageTranslatorService");
-  let awaysTranslateThisSite =
+  let alwaysTranslateThisSite =
     twpConfig.get("alwaysTranslateSites").indexOf(tabHostName) !== -1;
   let translateThisSite =
     twpConfig.get("neverTranslateSites").indexOf(tabHostName) === -1;
   let translateThisLanguage = false;
   let showPopupMobile = twpConfig.get("showPopupMobile");
 
+  // 监听配置变更事件
   twpConfig.onChanged(function (name, newValue) {
     switch (name) {
+      // 总是翻译的网站
       case "alwaysTranslateSites":
-        awaysTranslateThisSite = newValue.indexOf(tabHostName) !== -1;
+        alwaysTranslateThisSite = newValue.indexOf(tabHostName) !== -1;
         popupMobile.show();
         break;
+      // 从不翻译的网站
       case "neverTranslateSites":
         translateThisSite = newValue.indexOf(tabHostName) === -1;
         popupMobile.show();
         break;
+      // 从不翻译的语言
       case "neverTranslateLangs":
         translateThisLanguage =
           originalTabLanguage === "und" ||
@@ -77,6 +90,7 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
             newValue.indexOf(originalTabLanguage) === -1);
         popupMobile.show();
         break;
+      // 显示弹出窗口
       case "showPopupMobile":
         showPopupMobile = newValue;
         popupMobile.show();
@@ -87,6 +101,11 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
   let divElement;
   let getElemById;
 
+  /**
+   * 隐藏菜单
+   * @param {*} e 
+   * @returns 
+   */
   function hideMenu(e) {
     if (!divElement) return;
     if (e.target === divElement) return;
@@ -100,12 +119,17 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     pageLanguageState = _pageLanguageState;
   });
 
+  /**
+   * 显示popup弹出窗口
+   * @param {*} forceShow 
+   * @returns 
+   */
   popupMobile.show = function (forceShow = false) {
     popupMobile.hide();
 
     if (
       !forceShow &&
-      ((!awaysTranslateThisSite &&
+      ((!alwaysTranslateThisSite &&
         (!translateThisSite || !translateThisLanguage)) ||
         showPopupMobile !== "yes")
     )
@@ -124,6 +148,9 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
 
     chrome.i18n.translateDocument(shadowRoot);
 
+    /**
+     * 开启暗黑模式
+     */
     function enableDarkMode() {
       if (!shadowRoot.getElementById("darkModeElement")) {
         const el = document.createElement("style");
@@ -152,12 +179,16 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
       }
     }
 
+    /**
+     * 关闭暗黑模式
+     */
     function disableDarkMode() {
       if (shadowRoot.getElementById("#darkModeElement")) {
         shadowRoot.getElementById("#darkModeElement").remove();
       }
     }
 
+    // 根据配置决定是否开启暗黑模式
     switch (twpConfig.get("darkMode")) {
       case "auto":
         if (matchMedia("(prefers-color-scheme: dark)").matches) {
@@ -186,6 +217,10 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
       getElemById("btnTranslate").style.color = "#2196F3";
     }
 
+    /**
+     * 翻译整页
+     * @param {*} targetLanguage 
+     */
     function translatePage(targetLanguage = currentTargetLanguage) {
       getElemById("menuSelectLanguage").style.display = "none";
       getElemById("menu").style.display = "none";
@@ -227,6 +262,10 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
       });
     })();
 
+    /**
+     * 更新图标
+     * @returns 
+     */
     function updateIcon() {
       if (!getElemById) return;
 
@@ -247,11 +286,13 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
 
       currentPageTranslatorService =
         currentPageTranslatorService === "google" ? "yandex" : "google";
+      // 更新图标
       updateIcon();
 
       twpConfig.set("pageTranslatorService", currentPageTranslatorService);
     };
 
+    // 弹出窗的"显示原文"按钮的点击事件响应函数
     getElemById("btnOriginal").onclick = (e) => {
       pageTranslator.restorePage();
       if (!getElemById) return;
@@ -260,6 +301,7 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
       getElemById("btnTranslate").style.color = null;
     };
 
+    // 弹出窗的"翻译"按钮的点击事件响应函数
     getElemById("btnTranslate").onclick = (e) => {
       translatePage();
     };
@@ -336,6 +378,10 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     getElemById("btnDonate").innerHTML += " &#10084;";
   };
 
+  /**
+   * 隐藏弹出窗口
+   * @returns 
+   */
   popupMobile.hide = function () {
     if (!divElement) return;
 

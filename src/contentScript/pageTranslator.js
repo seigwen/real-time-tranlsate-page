@@ -83,7 +83,7 @@ function filterKeywordsInText(textContext) {
  *  handle the keywords in translatedText, replace it if there is a custom replacement value.
  *
  *  When encountering Google Translate reordering, the original text contains our mark, etc. , we will catch these exceptions and call the text translation method to retranslate this section.
- *  */
+ */
 async function handleCustomWords(
   translated,
   originalText,
@@ -142,9 +142,7 @@ async function handleCustomWords(
 
 /**
  *
- * True : Store the keyword in the Map and return the index
- *
- * False : Extract keywords by index
+ * mode: True : Store the keyword in the Map and return the index; False : Extract keywords by index
  * */
 function handleHitKeywords(value, mode) {
   if (mode) {
@@ -162,6 +160,7 @@ function handleHitKeywords(value, mode) {
 }
 
 /**
+ * 是否标点或分隔符
  * any kind of punctuation character (including international e.g. Chinese and Spanish punctuation), and spaces, newlines
  *
  * source: https://github.com/slevithan/xregexp/blob/41f4cd3fc0a8540c3c71969a0f81d1f00e9056a9/src/addons/unicode/unicode-categories.js#L142
@@ -194,6 +193,15 @@ function removeExtraDelimiter(textContext) {
   return textContext;
 }
 
+/**
+ * 请求后台翻译节点 
+ *  
+ * @param {*} translationService 
+ * @param {*} targetLanguage 
+ * @param {*} sourceArray2d 
+ * @param {*} dontSortResults 
+ * @returns 
+ */
 function backgroundTranslateHTML(
   translationService,
   targetLanguage,
@@ -216,6 +224,14 @@ function backgroundTranslateHTML(
   });
 }
 
+/**
+ * 请求后台翻译属性
+ * 
+ * @param {*} translationService 
+ * @param {*} targetLanguage 
+ * @param {*} sourceArray 
+ * @returns 
+ */
 function backgroundTranslateText(
   translationService,
   targetLanguage,
@@ -236,6 +252,14 @@ function backgroundTranslateText(
   });
 }
 
+/**
+ * 请求后台翻译单串文字
+ * 
+ * @param {*} translationService 
+ * @param {*} targetLanguage 
+ * @param {*} source 
+ * @returns 
+ */
 function backgroundTranslateSingleText(
   translationService,
   targetLanguage,
@@ -258,6 +282,10 @@ function backgroundTranslateSingleText(
 
 var pageTranslator = {};
 
+/**
+ * 获取tab主机名
+ * @returns 
+ */
 function getTabHostName() {
   return new Promise((resolve) =>
     chrome.runtime.sendMessage({ action: "getTabHostName" }, (result) =>
@@ -298,8 +326,11 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
   if (twpConfig.get("translateTag_pre") !== "yes") {
     htmlTagsInlineIgnore.push("pre");
   }
+
+  // 监听配置变更
   twpConfig.onChanged((name, newvalue) => {
     switch (name) {
+      // 是否翻译pre标签的内容
       case "translateTag_pre":
         const index = htmlTagsInlineIgnore.indexOf("pre");
         if (index !== -1) {
@@ -324,23 +355,32 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
   let piecesToTranslate = [];
   let originalTabLanguage = "und";
   let currentPageLanguage = "und";
+  // 页面语言状态(原始/已翻译)
   let pageLanguageState = "original";
+  // 当前目标语言. 一开始时,改值从config去除, 用户使用中更改目标语言时, currentTargetLanguage随之更改
   let currentTargetLanguage = twpConfig.get("targetLanguage");
+  // 翻译服务引擎(google/yandex)
   let currentPageTranslatorService = twpConfig.get("pageTranslatorService");
+  // 
   let dontSortResults =
     twpConfig.get("dontSortResults") == "yes" ? true : false;
   let fooCount = 0;
 
   let originalPageTitle;
-
+  // 需要翻译的attributes(如placehodler等)
   let attributesToTranslate = [];
-
+  // 定时翻译新节点(用setInterval定时)
   let translateNewNodesTimerHandler;
+  // 新节点(mutationObserver添加的节点)
   let newNodes = [];
+  // 新节点(mutationObserver删除的节点)
   let removedNodes = [];
 
   let nodesToRestore = [];
 
+  /**
+   * 翻译新建的节点
+   */
   function translateNewNodes() {
     try {
       newNodes.forEach((nn) => {
@@ -371,6 +411,7 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     }
   }
 
+  // 节点变更监听,新节点放入piecesToTranslate数组,删除节点放入removedNodes数组
   const mutationObserver = new MutationObserver(function (mutations) {
     const piecesToTranslate = [];
 
@@ -398,11 +439,16 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     });
   });
 
+  /**
+   * 监听节点变更; 每两秒翻译新节点
+   */
   function enableMutatinObserver() {
     disableMutatinObserver();
 
     if (twpConfig.get("translateDynamicallyCreatedContent") == "yes") {
+      // 每两秒翻译新节点
       translateNewNodesTimerHandler = setInterval(translateNewNodes, 2000);
+      // 监听节点更新
       mutationObserver.observe(document.body, {
         childList: true,
         subtree: true,
@@ -410,6 +456,9 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     }
   }
 
+  /**
+   * 取消监听节点变更; 取消定时翻译器
+   */
   function disableMutatinObserver() {
     clearInterval(translateNewNodesTimerHandler);
     newNodes = [];
@@ -419,7 +468,7 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
   }
 
   let pageIsVisible = document.visibilityState == "visible";
-  // isto faz com que partes do youtube não sejam traduzidas
+  // this causes parts of youtube not to be translated
   // new IntersectionObserver(entries => {
   //         if (entries[0].isIntersecting && document.visibilityState == "visible") {
   //             pageIsVisible = true
@@ -437,6 +486,9 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
   //     })
   //     .observe(document.body)
 
+  /**
+   * 监视页面可视性. 页面可视时开启mutationObserver和定时翻译器,否则关闭mutationObserver和定时翻译器
+   */
   const handleVisibilityChange = function () {
     if (document.visibilityState == "visible") {
       pageIsVisible = true;
@@ -452,6 +504,19 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
   };
   document.addEventListener("visibilitychange", handleVisibilityChange, false);
 
+  /**
+   * 获取传入的节点的树(包括节点自身和它的所有后代节点)的所有需要翻译的节点的信息
+   * 
+   * @param {*} root 
+   * @returns {array} piecesToTranslate, 一维数组(通过遍历,获取所有元素的信息,每个元素的信息放入一个对象,然后将该对象推入此一维数组), 数组元素格式如下:
+   *  {
+        isTranslated: boolean,
+        parentElement: node,
+        topElement: node,
+        bottomElement: node,
+        nodes: [],
+      },
+   */
   function getPiecesToTranslate(root = document.documentElement) {
     const piecesToTranslate = [
       {
@@ -465,16 +530,41 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     let index = 0;
     let currentParagraphSize = 0;
 
+    /**
+     * 获取节点的树的全部节点(即节点和后代节点). 过程为递归调用. 深度优先.
+     * @param {*} node 
+     * @param {*} lastHTMLElement 
+     * @param {*} lastSelectOrDataListElement 
+     * @returns 
+     */
     const getAllNodes = function (
       node,
       lastHTMLElement = null,
       lastSelectOrDataListElement = null
     ) {
+      /**
+       * nodeType:
+       *  
+        1	Node.ELEMENT_NODE                 一个 元素 节点，例如 <p> 和 <div>。
+        2	Node.ATTRIBUTE_NODE	              元素 的耦合 属性。
+        3	Node.TEXT_NODE                    Element或者 Attr 中实际的 文字
+        4	Node.CDATA_SECTION_NODE           一个 CDATASection，例如 <!CDATA[[ … ]]>。
+        7	Node.PROCESSING_INSTRUCTION_NODE	一个用于 XML 文档的 ProcessingInstruction (en-US) ，例如 <?xml-stylesheet ... ?> 声明。
+        8	Node.COMMENT_NODE	                一个 Comment 节点。
+        9	Node.DOCUMENT_NODE	              一个 Document 节点。
+        10 Node.DOCUMENT_TYPE_NODE	        描述文档类型的 DocumentType 节点。例如 <!DOCTYPE html> 就是用于 HTML5 的。
+        11 Node.DOCUMENT_FRAGMENT_NODE		  一个 DocumentFragment 节点
+       */
+
+      // element node or fragment node, 这两种节点具有子节点
       if (node.nodeType == 1 || node.nodeType == 11) {
+        // fragment node
         if (node.nodeType == 11) {
           lastHTMLElement = node.host;
           lastSelectOrDataListElement = null;
-        } else if (node.nodeType == 1) {
+        }
+        // element node
+        else if (node.nodeType == 1) {
           lastHTMLElement = node;
           const nodeName = node.nodeName.toLowerCase();
 
@@ -493,6 +583,7 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
             if (piecesToTranslate[index].nodes.length > 0) {
               currentParagraphSize = 0;
               piecesToTranslate[index].bottomElement = lastHTMLElement;
+              // 节点信息推入piecesToTranslate数组
               piecesToTranslate.push({
                 isTranslated: false,
                 parentElement: null,
@@ -506,6 +597,11 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
           }
         }
 
+        /**
+         * 获取节点的全部子节点
+         * 
+         * @param {*} childNodes 
+         */
         function getAllChilds(childNodes) {
           Array.from(childNodes).forEach((_node) => {
             const nodeName = _node.nodeName.toLowerCase();
@@ -520,6 +616,7 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
               if (piecesToTranslate[index].nodes.length > 0) {
                 currentParagraphSize = 0;
                 piecesToTranslate[index].bottomElement = lastHTMLElement;
+                // 子节点信息推入piecesToTranslate数组
                 piecesToTranslate.push({
                   isTranslated: false,
                   parentElement: null,
@@ -530,6 +627,7 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
                 index++;
               }
 
+              // 获取该子节点的所有子节点
               getAllNodes(_node, lastHTMLElement, lastSelectOrDataListElement);
 
               if (piecesToTranslate[index].nodes.length > 0) {
@@ -560,7 +658,9 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
             piecesToTranslate[index].bottomElement = node;
           }
         }
-      } else if (node.nodeType == 3) {
+      }
+      // neither element node nor fragment node, 这些节点没有子节点
+      else if (node.nodeType == 3) {
         if (node.textContent.trim().length > 0) {
           if (!piecesToTranslate[index].parentElement) {
             if (
@@ -623,9 +723,21 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
       piecesToTranslate.pop();
     }
 
+    console.log(111111, piecesToTranslate)
     return piecesToTranslate;
   }
 
+  /**
+   * 获取传入的节点的树(包括节点自身和它的所有后代节点)的所有需要翻译的属性的信息
+   * 
+   * @param {*} root 
+   * @returns {array} attributesToTranslate, 一维数组(通过遍历,获取所有属性的信息,每个属性的信息放入一个对象,然后将该对象推入此一维数组), 数组元素格式如下:
+   *  {
+        node: e,
+        original: "Reset",
+        attrName: "value",
+      }
+   */
   function getAttributesToTranslate(root = document.body) {
     const attributesToTranslate = [];
 
@@ -717,9 +829,9 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     return attributesToTranslate;
   }
 
-  // encapsular o texto faz com que do video suma
-  // ao utilizar função como Pai.removeChild(filho)
-  // pode ser gerado um erro ao encapsular
+  // encapsulating the text makes the video disappear 
+  // when using a function like Pai.removeChild(child) 
+  // an error can be generated when encapsulating
   function encapsulateTextNode(node) {
     const fontNode = document.createElement("font");
     fontNode.setAttribute("style", "vertical-align: inherit;");
@@ -730,6 +842,12 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     return fontNode;
   }
 
+  /**
+   * 把节点文本替换为翻译后的文本
+   * 
+   * @param {*} piecesToTranslateNow 
+   * @param {*} results 
+   */
   function translateResults(piecesToTranslateNow, results) {
     if (dontSortResults) {
       for (let i = 0; i < results.length; i++) {
@@ -747,6 +865,7 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
               translated += restResults.join(" ");
             }
 
+            // ??
             const originalTextNode = nodes[j];
             if (showOriginal.isEnabled) {
               nodes[j] = encapsulateTextNode(nodes[j]);
@@ -759,14 +878,18 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
               originalText: originalTextNode.textContent,
               translatedText: translated,
             };
+
+            // 把旧节点存储起来, 用于恢复
             nodesToRestore.push(toRestore);
 
+            // 处理自定义翻译
             handleCustomWords(
               translated,
               nodes[j].textContent,
               currentPageTranslatorService,
               currentTargetLanguage
             ).then((results) => {
+              // 把翻译结果放入节点
               nodes[j].textContent = results;
               toRestore.translatedText = results;
             });
@@ -792,15 +915,20 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
               originalText: originalTextNode.textContent,
               translatedText: translated,
             };
+
+            // 把旧节点存储起来, 用于恢复
             nodesToRestore.push(toRestore);
 
+            // 处理自定义翻译
             handleCustomWords(
               translated,
               nodes[j].textContent,
               currentPageTranslatorService,
               currentTargetLanguage
             ).then((results) => {
+              // 把翻译结果放入节点
               nodes[j].textContent = results;
+              // 把自定义翻译结果更新到toRestore.translatedText
               toRestore.translatedText = results;
             });
           }
@@ -810,6 +938,11 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     mutationObserver.takeRecords();
   }
 
+  /**
+   * 把属性文本替换为翻译后的属性文本
+   * @param {*} attributesToTranslateNow 
+   * @param {*} results 
+   */
   function translateAttributes(attributesToTranslateNow, results) {
     for (const i in attributesToTranslateNow) {
       const ati = attributesToTranslateNow[i];
@@ -817,12 +950,20 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     }
   }
 
+  /**
+   * 每600毫秒, 对在屏幕内显示的节点进行翻译
+   */
   function translateDynamically() {
     try {
       if (piecesToTranslate && pageIsVisible) {
         (function () {
           const innerHeight = window.innerHeight;
 
+          /**
+           * 是否完全在屏幕
+           * @param {*} element 
+           * @returns {boolean}
+           */
           function isInScreen(element) {
             const rect = element.getBoundingClientRect();
             if (
@@ -834,6 +975,11 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
             return false;
           }
 
+          /**
+           * 是否顶部在屏幕显示
+           * @param {*} element 
+           * @returns {boolean}
+           */
           function topIsInScreen(element) {
             if (!element) {
               // debugger;
@@ -846,6 +992,11 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
             return false;
           }
 
+          /**
+           * 是否底部在屏幕显示
+           * @param {*} element 
+           * @returns {boolean}
+           */
           function bottomIsInScreen(element) {
             if (!element) {
               // debugger;
@@ -860,6 +1011,7 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
 
           const currentFooCount = fooCount;
 
+          // 从piecesToTranslate数组中选择那些进入了屏幕可视区域的元素,放入piecesToTranslateNow数组中
           const piecesToTranslateNow = [];
           piecesToTranslate.forEach((ptt) => {
             if (!ptt.isTranslated) {
@@ -873,6 +1025,7 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
             }
           });
 
+          // 从attributesToTranslate数组中选择那些进入了屏幕可视区域的元素,放入attributesToTranslateNow数组中
           const attributesToTranslateNow = [];
           attributesToTranslate.forEach((ati) => {
             if (!ati.isTranslated) {
@@ -884,6 +1037,7 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
           });
 
           if (piecesToTranslateNow.length > 0) {
+            // 翻译节点列表
             backgroundTranslateHTML(
               currentPageTranslatorService,
               currentTargetLanguage,
@@ -896,12 +1050,14 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
                 pageLanguageState === "translated" &&
                 currentFooCount === fooCount
               ) {
+                // 把节点文本替换为翻译后的节点文本
                 translateResults(piecesToTranslateNow, results);
               }
             });
           }
 
           if (attributesToTranslateNow.length > 0) {
+            // 翻译属性列表
             backgroundTranslateText(
               currentPageTranslatorService,
               currentTargetLanguage,
@@ -911,6 +1067,7 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
                 pageLanguageState === "translated" &&
                 currentFooCount === fooCount
               ) {
+                // 把属性文本替换为翻译后的属性文本
                 translateAttributes(attributesToTranslateNow, results);
               }
             });
@@ -954,10 +1111,17 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     pageLanguageStateObservers.push(callback);
   };
 
+  /**
+   * 翻译整个页面
+   * @param {*} targetLanguage 
+   */
   pageTranslator.translatePage = function (targetLanguage) {
     fooCount++;
+    // 恢复原来页面
     pageTranslator.restorePage();
+    // 显示原来页面
     showOriginal.enable();
+    // 删除错误翻译
     chrome.runtime.sendMessage({ action: "removeTranslationsWithError" });
 
     dontSortResults = twpConfig.get("dontSortResults") == "yes" ? true : false;
@@ -966,7 +1130,9 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
       currentTargetLanguage = targetLanguage;
     }
 
+    // 获取所有要翻译的节点的信息列表(一维数组)
     piecesToTranslate = getPiecesToTranslate();
+    // 获取所有要翻译的属性的信息列表(一维数组)
     attributesToTranslate = getAttributesToTranslate();
 
     pageLanguageState = "translated";
@@ -979,10 +1145,13 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     );
     currentPageLanguage = currentTargetLanguage;
 
+    // 翻译标题
     translatePageTitle();
 
+    // 监听节点变更
     enableMutatinObserver();
 
+    // 翻译节点和属性(带定时器setTimeout)
     translateDynamically();
   };
 
@@ -1019,7 +1188,7 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     }
     nodesToRestore = [];
 
-    //TODO não restaurar atributos que foram modificados
+    //TODO do not restore attributes that have been modified
     for (const ati of attributesToTranslate) {
       if (ati.isTranslated) {
         ati.node.setAttribute(ati.attrName, ati.original);
@@ -1028,6 +1197,9 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     attributesToTranslate = [];
   };
 
+  /**
+   * 切换翻译服务
+   */
   pageTranslator.swapTranslationService = function () {
     if (currentPageTranslatorService === "google") {
       currentPageTranslatorService = "yandex";
@@ -1198,6 +1370,7 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
       }
     );
 
+    // 获取主帧状态
     chrome.runtime.sendMessage(
       {
         action: "getMainFramePageLanguageState",

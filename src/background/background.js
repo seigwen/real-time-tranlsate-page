@@ -5,7 +5,7 @@ function checkedLastError() {
   chrome.runtime.lastError;
 }
 
-// get mimetype
+// get a map of tabId to document's mimetype
 var tabToMimeType = {};
 chrome.webRequest.onHeadersReceived.addListener(
   function (details) {
@@ -28,7 +28,9 @@ chrome.webRequest.onHeadersReceived.addListener(
   ["responseHeaders"]
 );
 
+// 监听消息
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  // 获取主帧语言状态
   if (request.action === "getMainFramePageLanguageState") {
     chrome.tabs.sendMessage(
       sender.tab.id,
@@ -45,7 +47,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     );
 
     return true;
-  } else if (request.action === "getMainFrameTabLanguage") {
+  } 
+  // 获取主帧语言
+  else if (request.action === "getMainFrameTabLanguage") {
     chrome.tabs.sendMessage(
       sender.tab.id,
       {
@@ -61,17 +65,25 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     );
 
     return true;
-  } else if (request.action === "setPageLanguageState") {
+  } 
+  // 设置页面语言状态
+  else if (request.action === "setPageLanguageState") {
     updateContextMenu(request.pageLanguageState);
-  } else if (request.action === "openOptionsPage") {
+  } 
+  // 打开选项页
+  else if (request.action === "openOptionsPage") {
     chrome.tabs.create({
       url: chrome.runtime.getURL("/options/options.html"),
     });
-  } else if (request.action === "openDonationPage") {
+  } 
+  // 打开捐赠页
+  else if (request.action === "openDonationPage") {
     chrome.tabs.create({
       url: chrome.runtime.getURL("/options/options.html#donation"),
     });
-  } else if (request.action === "detectTabLanguage") {
+  } 
+  // 检测页面语言
+  else if (request.action === "detectTabLanguage") {
     if (!sender.tab) {
       // https://github.com/FilipePS/Traduzir-paginas-web/issues/478
       sendResponse("und");
@@ -87,15 +99,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     return true;
-  } else if (request.action === "getTabHostName") {
+  } 
+  // 获取tab的主机名
+  else if (request.action === "getTabHostName") {
     sendResponse(new URL(sender.tab.url).hostname);
-  } else if (request.action === "thisFrameIsInFocus") {
+  } 
+  // 帧获取焦点
+  else if (request.action === "thisFrameIsInFocus") {
     chrome.tabs.sendMessage(
       sender.tab.id,
       { action: "anotherFrameIsInFocus" },
       checkedLastError
     );
-  } else if (request.action === "getTabMimeType") {
+  } 
+  // 获取tab的mimeType
+  else if (request.action === "getTabMimeType") {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       sendResponse(tabToMimeType[tabs[0].id]);
     });
@@ -103,14 +121,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
+/**
+ * update the selected text context menu.
+ */
 function updateTranslateSelectedContextMenu() {
-  if (typeof chrome.contextMenus !== "undefined") {
-    chrome.contextMenus.remove("translate-selected-text", checkedLastError);
-    if (twpConfig.get("showTranslateSelectedContextMenu") === "yes") {
+  if (typeof chrome.contextMenus !== "undefined") { // check if chrome context menu is defined 
+    chrome.contextMenus.remove("translate-selected-text", checkedLastError); // remove existing "translate-selected-text" item, if any
+    if (twpConfig.get("showTranslateSelectedContextMenu") === "yes") { //if showTranslateSelectedContextMenu is enabled
+      //create a new context menu item with id "translate-selected-text" and title message "msgTranslateSelectedText"
       chrome.contextMenus.create({
         id: "translate-selected-text",
         title: chrome.i18n.getMessage("msgTranslateSelectedText"),
-        contexts: ["selection"],
+        contexts: ["selection"], //enable menu only when there is selected text
       });
     }
   }
@@ -139,12 +161,17 @@ function updateContextMenu(pageLanguageState = "original") {
   }
 }
 
+// 监听安装事件
 chrome.runtime.onInstalled.addListener((details) => {
+  // 全新安装
   if (details.reason == "install") {
+    // 打开选项页
     chrome.tabs.create({
       url: chrome.runtime.getURL("/options/options.html"),
     });
-  } else if (
+  }
+  // 更新
+  else if (
     details.reason == "update" &&
     chrome.runtime.getManifest().version != details.previousVersion
   ) {
@@ -176,12 +203,14 @@ chrome.runtime.onInstalled.addListener((details) => {
         );
       }
 
+      // 打开release_notes页
       if (showReleaseNotes) {
         chrome.tabs.create({
           url: chrome.runtime.getURL("/options/options.html#release_notes"),
         });
       }
 
+      // 删除翻译缓存
       translationCache.deleteTranslationCache();
     });
   }
@@ -232,32 +261,39 @@ function resetBrowserAction(forceShow = false) {
   }
 }
 
+// 创建上下文菜单(右键点击扩展图标时弹出)
 if (typeof chrome.contextMenus !== "undefined") {
+  // 创建菜单:弹出窗口
   chrome.contextMenus.create({
     id: "browserAction-showPopup",
     title: chrome.i18n.getMessage("btnShowPopup"),
     contexts: ["browser_action"],
   });
+  // 创建菜单:弹出窗口
   chrome.contextMenus.create({
     id: "pageAction-showPopup",
     title: chrome.i18n.getMessage("btnShowPopup"),
     contexts: ["page_action"],
   });
+  // 创建菜单:永不翻译此网站
   chrome.contextMenus.create({
     id: "never-translate",
     title: chrome.i18n.getMessage("btnNeverTranslate"),
     contexts: ["browser_action", "page_action"],
   });
+  // 创建菜单:更多选项
   chrome.contextMenus.create({
     id: "more-options",
     title: chrome.i18n.getMessage("btnMoreOptions"),
     contexts: ["browser_action", "page_action"],
   });
+  // 创建菜单:pdf转html
   chrome.contextMenus.create({
     id: "browserAction-pdf-to-html",
     title: chrome.i18n.getMessage("msgPDFtoHTML"),
     contexts: ["browser_action"],
   });
+  // 创建菜单:pdf转html
   chrome.contextMenus.create({
     id: "pageAction-pdf-to-html",
     title: chrome.i18n.getMessage("msgPDFtoHTML"),
@@ -266,7 +302,9 @@ if (typeof chrome.contextMenus !== "undefined") {
 
   const tabHasContentScript = {};
 
+  // 上下文菜单点击事件处理
   chrome.contextMenus.onClicked.addListener((info, tab) => {
+    // 菜单事件:翻译网页
     if (info.menuItemId == "translate-web-page") {
       chrome.tabs.sendMessage(
         tab.id,
@@ -275,7 +313,9 @@ if (typeof chrome.contextMenus !== "undefined") {
         },
         checkedLastError
       );
-    } else if (info.menuItemId == "translate-selected-text") {
+    } 
+    // 菜单事件:翻译选中文本
+    else if (info.menuItemId == "translate-selected-text") {
       if (
         chrome.pageAction &&
         chrome.pageAction.openPopup &&
@@ -288,7 +328,6 @@ if (typeof chrome.contextMenus !== "undefined") {
           tabId: tab.id,
         });
         chrome.pageAction.openPopup();
-
         resetPageAction(tab.id);
       } else {
         // a merda do chrome não suporte openPopup
@@ -301,26 +340,36 @@ if (typeof chrome.contextMenus !== "undefined") {
           checkedLastError
         );
       }
-    } else if (info.menuItemId == "browserAction-showPopup") {
+    } 
+    // 菜单事件:显示弹出窗口
+    else if (info.menuItemId == "browserAction-showPopup") {
       resetBrowserAction(true);
 
       chrome.browserAction.openPopup();
 
       resetBrowserAction();
-    } else if (info.menuItemId == "pageAction-showPopup") {
+    } 
+    // 菜单事件:显示弹出窗口
+    else if (info.menuItemId == "pageAction-showPopup") {
       resetPageAction(tab.id, true);
 
       chrome.pageAction.openPopup();
 
       resetPageAction(tab.id);
-    } else if (info.menuItemId == "never-translate") {
+    } 
+    // 菜单事件:永不翻译此网站
+    else if (info.menuItemId == "never-translate") {
       const hostname = new URL(tab.url).hostname;
       twpConfig.addSiteToNeverTranslate(hostname);
-    } else if (info.menuItemId == "more-options") {
+    } 
+    // 菜单事件:更多选项
+    else if (info.menuItemId == "more-options") {
       chrome.tabs.create({
         url: chrome.runtime.getURL("/options/options.html"),
       });
-    } else if (info.menuItemId == "browserAction-pdf-to-html") {
+    } 
+    // 菜单事件:pdf转html
+    else if (info.menuItemId == "browserAction-pdf-to-html") {
       const mimeType = tabToMimeType[tab.id];
       if (
         mimeType &&
@@ -333,7 +382,9 @@ if (typeof chrome.contextMenus !== "undefined") {
           url: "https://translatewebpages.org/",
         });
       }
-    } else if (info.menuItemId == "pageAction-pdf-to-html") {
+    } 
+    // 菜单事件:pdf转html
+    else if (info.menuItemId == "pageAction-pdf-to-html") {
       const mimeType = tabToMimeType[tab.id];
       if (
         mimeType &&
@@ -349,6 +400,7 @@ if (typeof chrome.contextMenus !== "undefined") {
     }
   });
 
+  // 监听tab激活事件
   chrome.tabs.onActivated.addListener((activeInfo) => {
     twpConfig.onReady(() => updateContextMenu());
     chrome.tabs.sendMessage(
@@ -368,6 +420,7 @@ if (typeof chrome.contextMenus !== "undefined") {
     );
   });
 
+  // 监听tab更新事件
   chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (tab.active && changeInfo.status == "loading") {
       twpConfig.onReady(() => updateContextMenu());
@@ -388,6 +441,7 @@ if (typeof chrome.contextMenus !== "undefined") {
     }
   });
 
+  // 监听tab关闭事件
   chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
     delete tabHasContentScript[tabId];
   });
@@ -413,8 +467,11 @@ if (typeof chrome.contextMenus !== "undefined") {
   );
 }
 
+// 监听配置完成事件
 twpConfig.onReady(() => {
+  // 移动平台
   if (platformInfo.isMobile.any) {
+    // 隐藏pageAction
     chrome.tabs.query({}, (tabs) =>
       tabs.forEach((tab) => chrome.pageAction.hide(tab.id))
     );
@@ -437,7 +494,9 @@ twpConfig.onReady(() => {
         checkedLastError
       );
     });
-  } else {
+  } 
+  // 非移动平台
+  else {
     if (chrome.pageAction) {
       chrome.pageAction.onClicked.addListener((tab) => {
         if (twpConfig.get("translateClickingOnce") === "yes") {
@@ -465,6 +524,7 @@ twpConfig.onReady(() => {
 
     resetBrowserAction();
 
+    // 监听配置变更事件
     twpConfig.onChanged((name, newvalue) => {
       switch (name) {
         case "useOldPopup":
@@ -486,6 +546,7 @@ twpConfig.onReady(() => {
     });
 
     {
+      // "original" or "translated"
       let pageLanguageState = "original";
 
       let themeColorFieldText = null;
@@ -524,10 +585,12 @@ twpConfig.onReady(() => {
         });
       }
 
+      // 获取浏览器显示模式(是否暗黑模式)
       let darkMode = false;
       darkMode = matchMedia("(prefers-color-scheme: dark)").matches;
       updateIconInAllTabs();
 
+      // 监听显示模式变更
       matchMedia("(prefers-color-scheme: dark)").addEventListener(
         "change",
         () => {
@@ -575,6 +638,7 @@ twpConfig.onReady(() => {
         return b64Start + svg64;
       }
 
+      // 更新图标
       function updateIcon(tabId) {
         chrome.tabs.query({}, (tabs) => {
           const tabInfo = tabs.find((tab) => tab.id === tabId);
@@ -668,6 +732,7 @@ twpConfig.onReady(() => {
   }
 });
 
+// 监听热键
 if (typeof chrome.commands !== "undefined") {
   chrome.commands.onCommand.addListener((command) => {
     if (command === "hotkey-toggle-translation") {
@@ -815,11 +880,16 @@ if (typeof chrome.commands !== "undefined") {
   });
 }
 
+// 监听配置完成事件
 twpConfig.onReady(async () => {
+  // 更新上下文菜单
   updateContextMenu();
+  // 更新选择上下文菜单
   updateTranslateSelectedContextMenu();
 
+  // 监听配置变更事件
   twpConfig.onChanged((name, newvalue) => {
+    // 更新选择上下文菜单
     if (name === "showTranslateSelectedContextMenu") {
       updateTranslateSelectedContextMenu();
     }

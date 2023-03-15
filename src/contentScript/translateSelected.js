@@ -1,8 +1,14 @@
 "use strict";
 
-// TODO especificar o parametro HL para aprimorar a detecção de idioma
-//TODO desativar o botão caso a pagina esteja traduzida
+/**
+ * 划词翻译
+ */
 
+
+// TODO 指定 HL 参数以增强语言检测
+// TODO 如果页面已翻译，则停用按钮
+
+// 这个对象没有被用到??
 var translateSelected = {};
 
 function getTabHostName() {
@@ -26,28 +32,44 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
   let eOrigText;
   let origTextContainer;
 
+  /**
+   * 从配置文件获取配置, 赋值给内存变量
+   */
+
+  // tab原语言
   let originalTabLanguage = "und";
+  // 当前目标语言列表
   let currentTargetLanguages = twpConfig.get("targetLanguages");
+  // 当前目标语言
   let currentTargetLanguage = twpConfig.get("targetLanguageTextTranslation");
+  // 当前翻译服务
   let currentTextTranslatorService = twpConfig.get("textTranslatorService");
-  let awaysTranslateThisSite =
+  // 总是翻译此网站
+  let alwaysTranslateThisSite =
     twpConfig.get("alwaysTranslateSites").indexOf(tabHostName) !== -1;
+  // 可翻译此网站(从不翻译此网站的反值)
   let translateThisSite =
     twpConfig.get("neverTranslateSites").indexOf(tabHostName) === -1;
+  // 可翻译此语言(从不翻译此语言的反值)
   let translateThisLanguage =
     twpConfig.get("neverTranslateLangs").indexOf(originalTabLanguage) === -1;
+  // 在选中文本侧边显示"翻译"图标
   let showTranslateSelectedButton = twpConfig.get(
     "showTranslateSelectedButton"
   );
+  // 当语言是目标语言时不显示划词翻译弹出框
   let dontShowIfPageLangIsTargetLang = twpConfig.get(
     "dontShowIfPageLangIsTargetLang"
   );
+  // 当语言是未知语言时不显示划词翻译弹出框
   let dontShowIfPageLangIsUnknown = twpConfig.get(
     "dontShowIfPageLangIsUnknown"
   );
+  // 当选中文本是目标语言时不显示划词翻译弹出框
   let dontShowIfSelectedTextIsTargetLang = twpConfig.get(
     "dontShowIfSelectedTextIsTargetLang"
   );
+  // 当选中文本是目标语言时不显示划词翻译弹出框
   let dontShowIfSelectedTextIsUnknown = twpConfig.get(
     "dontShowIfSelectedTextIsUnknown"
   );
@@ -60,6 +82,11 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     updateEventListener();
   });
 
+  /**
+   * 检测文字的语言
+   * @param {*} text 
+   * @returns 
+   */
   async function detectTextLanguage(text) {
     if (!chrome.i18n.detectLanguage) return "und";
 
@@ -81,6 +108,12 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
 
   let isPlayingAudio = false;
 
+  /**
+   * 播放音频
+   * @param {*} text 
+   * @param {*} targetLanguage 
+   * @param {*} cbOnEnded 
+   */
   function playAudio(text, targetLanguage, cbOnEnded = () => {}) {
     isPlayingAudio = true;
     chrome.runtime.sendMessage(
@@ -104,6 +137,11 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     });
   }
 
+  /**
+   * 拖曳
+   * @param {*} elmnt 
+   * @param {*} elmnt2 
+   */
   function dragElement(elmnt, elmnt2) {
     var pos1 = 0,
       pos2 = 0,
@@ -164,6 +202,9 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
   let onCSSLoad = null;
   let isCSSLoaded = false;
 
+  /**
+   * 初始化
+   */
   function init() {
     destroy();
 
@@ -470,6 +511,7 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
       translateNewInputTimerHandler = setTimeout(translateNewInput, 800);
     };
 
+    // "更多/更少"按钮的点击事件响应
     eMoreOrLess.onclick = () => {
       if (twpConfig.get("expandPanelTranslateSelectedText") === "no") {
         twpConfig.set("expandPanelTranslateSelectedText", "yes");
@@ -695,6 +737,10 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     });
   }
 
+  /**
+   * 销毁划词翻译窗口
+   * @returns 
+   */
   function destroy() {
     window.isTranslatingSelected = false;
     fooCount++;
@@ -720,6 +766,7 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     }
   }
 
+  // 监听配置变更事件, 更新内存里的值
   twpConfig.onChanged(function (name, newValue) {
     switch (name) {
       case "textTranslatorService":
@@ -732,7 +779,7 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
         currentTargetLanguage = newValue;
         break;
       case "alwaysTranslateSites":
-        awaysTranslateThisSite = newValue.indexOf(tabHostName) !== -1;
+        alwaysTranslateThisSite = newValue.indexOf(tabHostName) !== -1;
         updateEventListener();
         break;
       case "neverTranslateSites":
@@ -824,6 +871,9 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     }
   }
 
+  /**
+   * 翻译输入的新文本
+   */
   function translateNewInput() {
     fooCount++;
     const currentFooCount = fooCount;
@@ -840,6 +890,11 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     });
   }
 
+  /**
+   * 翻译选中文本
+   * @param {*} usePrevSelectionInfo 
+   * @returns 
+   */
   function translateSelText(usePrevSelectionInfo = false) {
     if (!usePrevSelectionInfo && gSelectionInfo) {
       prevSelectionInfo = gSelectionInfo;
@@ -858,6 +913,10 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     }, 1000);
   }
 
+  /**
+   * 鼠标点击事件: 翻译选中文本
+   * @param {*} e 
+   */
   function onClick(e) {
     translateSelText();
     eButtonTransSelText.style.display = "none";
@@ -898,6 +957,11 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     return text;
   }
 
+  /**
+   * 读取选中文本, 以便翻译
+   * @param {*} dontReadIfSelectionDontChange 
+   * @returns 
+   */
   function readSelection(dontReadIfSelectionDontChange = false) {
     let newSelectionInfo = null;
 
@@ -1087,7 +1151,7 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
   function updateEventListener() {
     if (
       showTranslateSelectedButton == "yes" &&
-      (awaysTranslateThisSite ||
+      (alwaysTranslateThisSite ||
         (translateThisSite && translateThisLanguage)) &&
       ((dontShowIfPageLangIsTargetLang == "yes" &&
         originalTabLanguage !== currentTargetLanguage) ||
