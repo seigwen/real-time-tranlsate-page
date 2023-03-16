@@ -437,6 +437,7 @@ const translationService = (function () {
     }
 
     /**
+     * 准备请求列表
      * Receives the `sourceArray2d` parameter and prepares the requests.
      * Calls `cbTransformRequest` for each `sourceArray` of `sourceArray2d`.
      * The `currentTranslationsInProgress` array will be the **final result** with requests already completed or in progress. 
@@ -531,6 +532,7 @@ const translationService = (function () {
     }
 
     /**
+     * 发出请求列表里的所有请求
      * Makes a request using the *XMLHttpRequest* API. Returns a promise that will be resolved with the result of the request. If the request fails, the promise will be rejected.
      * @param {string} sourceLanguage
      * @param {string} targetLanguage
@@ -578,6 +580,7 @@ const translationService = (function () {
     }
 
     /**
+     * 翻译HTML: 准备请求列表, 然后全部发出
      * Translates the `sourceArray2d`.
      *
      * If `dontSaveInPersistentCache` is **true** then the translation result will not be saved in the on-disk translation cache, only in the in-memory cache.
@@ -1130,7 +1133,7 @@ const translationService = (function () {
   );
 
   /**
-   * 翻译HTML
+   * 翻译元素列表(二维列表)
    * 
    * @param {*} serviceName 
    * @param {*} sourceLanguage 
@@ -1163,6 +1166,15 @@ const translationService = (function () {
     );
   };
 
+  /**
+   * 翻译属性列表(一维列表)
+   * @param {*} serviceName 
+   * @param {*} sourceLanguage 
+   * @param {*} targetLanguage 
+   * @param {*} sourceArray 
+   * @param {*} dontSaveInPersistentCache 
+   * @returns 
+   */
   translationService.translateText = async (
     serviceName,
     sourceLanguage,
@@ -1186,6 +1198,15 @@ const translationService = (function () {
     )[0];
   };
 
+  /**
+   * 翻译单串字符串
+   * @param {*} serviceName 
+   * @param {*} sourceLanguage 
+   * @param {*} targetLanguage 
+   * @param {*} originalText 
+   * @param {*} dontSaveInPersistentCache 
+   * @returns 
+   */
   translationService.translateSingleText = async (
     serviceName,
     sourceLanguage,
@@ -1209,12 +1230,13 @@ const translationService = (function () {
     )[0][0];
   };
 
+  // 监听其他页面发的翻译请求, 进行翻译
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // If the translation request came from an incognito window, the translation should not be cached on disk.
     const dontSaveInPersistentCache = sender.tab ? sender.tab.incognito : false;
     if (request.action === "translateHTML") {
       translationService
-        .translateHTML(
+        .translateHTML(  // 翻译元素列表(二维列表)
           request.translationService,
           "auto",
           request.targetLanguage,
@@ -1231,7 +1253,7 @@ const translationService = (function () {
       return true;
     } else if (request.action === "translateText") {
       translationService
-        .translateText(
+        .translateText( // 翻译属性列表(一维列表)
           request.translationService,
           "auto",
           request.targetLanguage,
@@ -1247,7 +1269,7 @@ const translationService = (function () {
       return true;
     } else if (request.action === "translateSingleText") {
       translationService
-        .translateSingleText(
+        .translateSingleText(  // 翻译单串字符串
           request.translationService,
           "auto",
           request.targetLanguage,

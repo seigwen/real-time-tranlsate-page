@@ -163,14 +163,14 @@ function updateContextMenu(pageLanguageState = "original") {
 
 // 监听安装事件
 chrome.runtime.onInstalled.addListener((details) => {
-  // 全新安装
+  // 如果是全新安装插件
   if (details.reason == "install") {
     // 打开选项页
     chrome.tabs.create({
       url: chrome.runtime.getURL("/options/options.html"),
     });
   }
-  // 更新
+  // 如果是更新插件
   else if (
     details.reason == "update" &&
     chrome.runtime.getManifest().version != details.previousVersion
@@ -215,6 +215,7 @@ chrome.runtime.onInstalled.addListener((details) => {
     });
   }
 
+  // 移动平台关闭deepl
   twpConfig.onReady(async () => {
     if (platformInfo.isMobile.any) {
       twpConfig.set("enableDeepL", "no");
@@ -243,19 +244,24 @@ function resetPageAction(tabId, forceShow = false) {
   }
 }
 
+/**
+ * 根据最新的translateClickingOnce设置, 设置BrowserAction的popup(不弹出/弹出旧窗口/弹出新窗口)
+ * @param {*} forceShow 
+ */
 function resetBrowserAction(forceShow = false) {
+  // 当开启了"一键翻译"时
   if (twpConfig.get("translateClickingOnce") === "yes" && !forceShow) {
     chrome.browserAction.setPopup({
-      popup: null,
+      popup: null, // 不弹出窗口
     });
   } else {
     if (twpConfig.get("useOldPopup") === "yes") {
       chrome.browserAction.setPopup({
-        popup: "popup/old-popup.html",
+        popup: "popup/old-popup.html", // 弹出旧窗口
       });
     } else {
       chrome.browserAction.setPopup({
-        popup: "popup/popup.html",
+        popup: "popup/popup.html", // 弹出新窗口
       });
     }
   }
@@ -497,6 +503,7 @@ twpConfig.onReady(() => {
   } 
   // 非移动平台
   else {
+    // 如果有pageAction, 则pageAction被点击时切换翻译后页面/原始页面
     if (chrome.pageAction) {
       chrome.pageAction.onClicked.addListener((tab) => {
         if (twpConfig.get("translateClickingOnce") === "yes") {
@@ -510,6 +517,7 @@ twpConfig.onReady(() => {
         }
       });
     }
+    // browserAction, 则browserAction被点击时切换翻译后页面/原始页面
     chrome.browserAction.onClicked.addListener((tab) => {
       if (twpConfig.get("translateClickingOnce") === "yes") {
         chrome.tabs.sendMessage(
@@ -522,6 +530,7 @@ twpConfig.onReady(() => {
       }
     });
 
+    // 设置browserAction点击响应
     resetBrowserAction();
 
     // 监听配置变更事件
@@ -545,12 +554,15 @@ twpConfig.onReady(() => {
       }
     });
 
+    // 更新图标
     {
-      // "original" or "translated"
+      // 页面语言状态: "original" or "translated"
       let pageLanguageState = "original";
 
       let themeColorFieldText = null;
       let themeColorAttention = null;
+
+      // 根据当前浏览器的theme更新themeColorFieldText和themeColorAttention, 然后更新所有tab的图标
       if (browser.theme) {
         browser.theme.getCurrent().then((theme) => {
           themeColorFieldText = null;
@@ -562,9 +574,11 @@ twpConfig.onReady(() => {
             themeColorAttention = theme.colors.icons_attention;
           }
 
+          // 更新所有tab的图标
           updateIconInAllTabs();
         });
 
+        // 监听theme更新事件
         chrome.theme.onUpdated.addListener((updateInfo) => {
           themeColorFieldText = null;
           themeColorAttention = null;
@@ -588,9 +602,11 @@ twpConfig.onReady(() => {
       // 获取浏览器显示模式(是否暗黑模式)
       let darkMode = false;
       darkMode = matchMedia("(prefers-color-scheme: dark)").matches;
+
+      // 更新所有tab的icon
       updateIconInAllTabs();
 
-      // 监听显示模式变更
+      // 监听暗黑模式变更, 更新所有tab的icon
       matchMedia("(prefers-color-scheme: dark)").addEventListener(
         "change",
         () => {
@@ -599,6 +615,11 @@ twpConfig.onReady(() => {
         }
       );
 
+      /**
+       * 获取icon(不同显示模式返回不同的icon)
+       * @param {boolean} incognito 
+       * @returns 
+       */
       function getSVGIcon(incognito = false) {
         const svgXml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
                     <path fill="$(fill);" fill-opacity="$(fill-opacity);" d="M 45 0 C 20.186 0 0 20.186 0 45 L 0 347 C 0 371.814 20.186 392 45 392 L 301 392 C 305.819 392 310.34683 389.68544 313.17383 385.77344 C 315.98683 381.84744 316.76261 376.82491 315.22461 372.25391 L 195.23828 10.269531 A 14.995 14.995 0 0 0 181 0 L 45 0 z M 114.3457 107.46289 L 156.19336 107.46289 C 159.49489 107.46289 162.41322 109.61359 163.39258 112.76367 L 163.38281 112.77539 L 214.06641 276.2832 C 214.77315 278.57508 214.35913 281.05986 212.93555 282.98828 C 211.52206 284.90648 209.27989 286.04688 206.87695 286.04688 L 179.28516 286.04688 C 175.95335 286.04687 173.01546 283.86624 172.06641 280.67578 L 159.92969 240.18945 L 108.77148 240.18945 L 97.564453 280.52344 C 96.655774 283.77448 93.688937 286.03711 90.306641 286.03711 L 64.347656 286.03711 C 61.954806 286.03711 59.71461 284.90648 58.291016 282.98828 C 56.867422 281.05986 56.442021 278.57475 57.138672 276.29297 L 107.14648 112.79492 C 108.11572 109.62465 111.03407 107.46289 114.3457 107.46289 z M 133.39648 137.70117 L 114.55664 210.03125 L 154.06445 210.03125 L 133.91211 137.70117 L 133.39648 137.70117 z " />
@@ -677,12 +698,14 @@ twpConfig.onReady(() => {
         });
       }
 
+      // 更新每个tab的图标
       function updateIconInAllTabs() {
         chrome.tabs.query({}, (tabs) =>
           tabs.forEach((tab) => updateIcon(tab.id))
         );
       }
 
+      // 监听tab更新事件, 更新图标
       chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         if (changeInfo.status == "loading") {
           pageLanguageState = "original";
@@ -690,6 +713,7 @@ twpConfig.onReady(() => {
         }
       });
 
+      // 监听tab激活事件, 更新图标
       chrome.tabs.onActivated.addListener((activeInfo) => {
         pageLanguageState = "original";
         updateIcon(activeInfo.tabId);
@@ -966,6 +990,10 @@ twpConfig.onReady(async () => {
     }
   }
 
+  /**
+   * 通知tab在页面DOMContentLoaded事件触发后自动翻译网页
+   * @param {*} details 
+   */
   function webNavigationOnDOMContentLoaded(details) {
     if (details.frameId === 0) {
       const host = new URL(details.url).host;
@@ -988,6 +1016,10 @@ twpConfig.onReady(async () => {
     }
   }
 
+  /**
+   * 启用"若点击链接所访问的网站与当前域名相同，则自动翻译"
+   * @returns 
+   */
   function enableTranslationOnClickingALink() {
     disableTranslationOnClickingALink();
     if (!chrome.webNavigation) return;
@@ -1001,6 +1033,10 @@ twpConfig.onReady(async () => {
     );
   }
 
+  /**
+   * 禁用"若点击链接所访问的网站与当前域名相同，则自动翻译"
+   * @returns 
+   */
   function disableTranslationOnClickingALink() {
     activeTabTranslationInfo = {};
     sitesToAutoTranslate = {};
@@ -1018,9 +1054,11 @@ twpConfig.onReady(async () => {
     }
   }
 
+  // 监听"若点击链接所访问的网站与当前域名相同，则自动翻译"的设置变更
   twpConfig.onChanged((name, newvalue) => {
     if (name === "autoTranslateWhenClickingALink") {
       if (newvalue == "yes") {
+        // 若点击链接所访问的网站与当前域名相同，则自动翻译
         enableTranslationOnClickingALink();
       } else {
         disableTranslationOnClickingALink();
@@ -1028,12 +1066,13 @@ twpConfig.onReady(async () => {
     }
   });
 
+  // 当用户禁止了webNavigation权限时(该权限允许扩展监听onBeforeNavigate/onCommitted/[onDOMContentLoaded]/onCompleted事件)
+  // 禁止自动翻译
   chrome.permissions.onRemoved.addListener((permissions) => {
     if (permissions.permissions.indexOf("webNavigation") !== -1) {
       twpConfig.set("autoTranslateWhenClickingALink", "no");
     }
   });
-
   chrome.permissions.contains(
     {
       permissions: ["webNavigation"],

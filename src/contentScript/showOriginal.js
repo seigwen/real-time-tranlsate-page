@@ -10,14 +10,14 @@
  *  disable:()=>void,
  *  add:()=>void,
  *  removeAll:()=>void,
- *  enabledObserverSubscribe:()=>void
+ *  enabledObserverSubscribe:(Function)=>void
  *  isEnabled:boolean
  * }}
  */
-var showOriginal;
+var showOriginal={};
 
 twpConfig.onReady(function () {
-  // 移动平台上,不允许showOriginal的任何相关操作(悬停显示原文)
+  // 移动平台上,不允许showOriginal(悬停显示原文)的任何相关操作
   if (platformInfo.isMobile.any) {
     showOriginal.enable = () => {};
     showOriginal.disable = () => {};

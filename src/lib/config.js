@@ -58,7 +58,7 @@ const twpConfig = (function () {
   );
 
   /**
-   * this function is executed when de config is ready
+   * this function is executed when config is ready
    */
   function readyConfig() {
     configIsReady = true;
@@ -74,7 +74,7 @@ const twpConfig = (function () {
    * @param {function} callback
    * @returns {Promise}
    */
-  twpConfig.onReady = function (callback) {
+  twpConfig.onReady = function (callback=undefined) {
     if (callback) {
       if (configIsReady) {
         callback();
@@ -123,6 +123,7 @@ const twpConfig = (function () {
       version: chrome.runtime.getManifest().version,
     };
 
+    // 把map转为对象,把set转为数组
     for (const key in defaultConfig) {
       //@ts-ignore
       r[key] = toObjectOrArrayIfTypeIsMapOrSet(twpConfig.get(key));
@@ -159,6 +160,7 @@ const twpConfig = (function () {
       }
     }
 
+    // 重载扩展
     chrome.runtime.reload();
   };
 
@@ -200,6 +202,7 @@ const twpConfig = (function () {
     observers.push(callback);
   };
 
+  // 监听storage变化
   // listen to storage changes
   chrome.storage.onChanged.addListener((changes, areaName) => {
     twpConfig.onReady(function () {
