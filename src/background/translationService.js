@@ -203,10 +203,10 @@ const translationService = (function () {
           http.onerror =
             http.onabort =
             http.ontimeout =
-              (e) => {
-                console.error(e);
-                resolve();
-              };
+            (e) => {
+              console.error(e);
+              resolve();
+            };
         } else {
           resolve();
         }
@@ -316,10 +316,10 @@ const translationService = (function () {
           http.onerror =
             http.onabort =
             http.ontimeout =
-              (e) => {
-                console.error(e);
-                resolve();
-              };
+            (e) => {
+              console.error(e);
+              resolve();
+            };
         } else {
           resolve();
         }
@@ -453,6 +453,7 @@ const translationService = (function () {
      * @returns {Promise<[Array<TranslationInfo[]>, TranslationInfo[]]>} `requests`, `currentTranslationsInProgress`
      */
     async getRequests(sourceLanguage, targetLanguage, sourceArray2d) {
+
       /** @type {Array<TranslationInfo[]>} */
       const requests = [];
       /** @type {TranslationInfo[]} */
@@ -463,6 +464,7 @@ const translationService = (function () {
 
       for (const sourceArray of sourceArray2d) {
         const requestString = this.fixString(
+          // Takes `sourceArray` and returns a request string to the translation service.
           this.cbTransformRequest(sourceArray)
         );
         const requestHash = [
@@ -471,10 +473,15 @@ const translationService = (function () {
           requestString,
         ].join(", ");
 
+        // progressInfo: TranslationInfo
+        // 格式类似于这样:{originalText: '<pre>YouTube</pre>', translatedText: '<pre>YouTube</pre>', detectedLanguage: 'en', waitTranlate: Promise}
         const progressInfo = this.translationsInProgress.get(requestHash);
+        // 当前有一模一样的request
         if (progressInfo) {
           currentTranslationsInProgress.push(progressInfo);
-        } else {
+        } 
+        // 当前没有一模一样的request
+        else {
           /** @type {TranslationStatus} */
           let status = "translating";
           /** @type {() => void} */
@@ -545,13 +552,13 @@ const translationService = (function () {
         xhr.open(
           this.xhrMethod,
           this.baseURL +
-            (this.cbGetExtraParameters
-              ? this.cbGetExtraParameters(
-                  sourceLanguage,
-                  targetLanguage,
-                  requests
-                )
-              : "")
+          (this.cbGetExtraParameters
+            ? this.cbGetExtraParameters(
+              sourceLanguage,
+              targetLanguage,
+              requests
+            )
+            : "")
         );
         xhr.setRequestHeader(
           "Content-Type",
@@ -566,10 +573,10 @@ const translationService = (function () {
         xhr.onerror =
           xhr.onabort =
           xhr.ontimeout =
-            (event) => {
-              console.error(event);
-              reject();
-            };
+          (event) => {
+            console.error(event);
+            reject();
+          };
 
         xhr.send(
           this.cbGetExtraParameters
@@ -580,7 +587,7 @@ const translationService = (function () {
     }
 
     /**
-     * 翻译HTML: 准备请求列表, 然后全部发出
+     * 翻译HTML: 根据参数准备请求列表, 然后全部发出(google translate api允许参数是HTML格式,)
      * Translates the `sourceArray2d`.
      *
      * If `dontSaveInPersistentCache` is **true** then the translation result will not be saved in the on-disk translation cache, only in the in-memory cache.
@@ -600,6 +607,8 @@ const translationService = (function () {
       dontSaveInPersistentCache = false,
       dontSortResults = false
     ) {
+      console.log("Class.translate() is called")
+
       // 准备requests数组
       const [requests, currentTranslationsInProgress] = await this.getRequests(
         sourceLanguage,
@@ -613,10 +622,13 @@ const translationService = (function () {
         promises.push(
           this.makeRequest(sourceLanguage, targetLanguage, request)
             .then((response) => {
+
+              // 执行响应解析的回调函数,得到results
               const results = this.cbParseResponse(response);
+
               for (const idx in request) {
                 const result = results[idx];
-                this.cbTransformResponse(result.text, dontSortResults); // apenas para gerar error
+                this.cbTransformResponse(result.text, dontSortResults); // just to generate error
                 const transInfo = request[idx];
                 transInfo.detectedLanguage = result.detectedLanguage || "und";
                 transInfo.translatedText = result.text;
@@ -670,8 +682,11 @@ const translationService = (function () {
         "google",
         "https://translate.googleapis.com/translate_a/t?anno=3&client=te&v=1.0&format=html",
         "POST",
+        // Takes `sourceArray` and returns a request string to the translation service.
         function cbTransformRequest(sourceArray) {
+          // 净化文本
           sourceArray = sourceArray.map((text) => Utils.escapeHTML(text));
+          // 用a标签包裹文本
           if (sourceArray.length > 1) {
             sourceArray = sourceArray.map(
               (text, index) => `<a i=${index}>${text}</a>`
@@ -680,26 +695,42 @@ const translationService = (function () {
           // the <pre> tag is to preserve the text formating
           return `<pre>${sourceArray.join("")}</pre>`;
         },
+        /**
+         * parse response
+         * @param {*} response google翻译返回格式类似于这样:[["<pre>bestlifeonline.com</pre>","zh-CN"],["<pre><a i=0>https://bestlifeonline.com</a> <a i=1>›</a><a i=2>有趣的...</a></pre>","en"]]
+         * @returns {[Service_Single_Result_Response]}
+         */
         function cbParseResponse(response) {
           /** @type {[Service_Single_Result_Response]} */
           let responseJson;
+          // response是字符串
           if (typeof response === "string") {
             responseJson = [{ text: response, detectedLanguage: null }];
-          } else if (typeof response[0] === "string") {
+          } 
+          // response是数组且第一个元素是字符串
+          else if (typeof response[0] === "string") {
             responseJson = response.map(
-              /** @returns {Service_Single_Result_Response} */ (
+              /** @returns {Service_Single_Result_Response} */(
                 /** @type {string} */ value
-              ) => ({ text: value, detectedLanguage: null })
+            ) => ({ text: value, detectedLanguage: null })
             );
-          } else {
+          } 
+          // response是数组
+          else {
             responseJson = response.map(
-              /** @returns {Service_Single_Result_Response} */ (
+              /** @returns {Service_Single_Result_Response} */(
                 /** @type {[string, string]} */ value
-              ) => ({ text: value[0], detectedLanguage: value[1] })
+            ) => ({ text: value[0], detectedLanguage: value[1] })
             );
           }
           return responseJson;
         },
+        /**
+         * remove some tags like <pre>, <i>, <b>
+         * @param {string} result 
+         * @param {boolean} dontSortResults 
+         * @returns 
+         */
         function cbTransformResponse(result, dontSortResults) {
           // remove the <pre> tag from the response
           if (result.indexOf("<pre") !== -1) {
@@ -709,10 +740,10 @@ const translationService = (function () {
           }
 
           /** @type {string[]} */
-          const sentences = []; // each translated sentence is inside of <b> tag
+          const sentences = []; // each translated sentence is inside of <b> tag (啥意思????？？？？？??？？？???？？？？)
 
           // The main objective is to remove the original text of each sentense that is inside the <i> tags.
-          // Keeping only the <a> tags
+          // Keeping only the <a> tags  (啥意思????？？？？？??？？？???？？？？)
           let idx = 0;
           while (true) {
             // each translated sentence is inside of <b> tag
@@ -736,7 +767,7 @@ const translationService = (function () {
             idx = sentenceFinalIndex;
           }
 
-          // maybe the response don't have any sentence (does not have <i> and <b> tags), is this case just use de result
+          // maybe the response don't have any sentence (does not have <i> and <b> tags), is this case just use the result
           result = sentences.length > 0 ? sentences.join(" ") : result;
           // Remove the remaining </b> tags (usually the last)
           result = result.replace(/\<\/b\>/g, "");
@@ -783,6 +814,8 @@ const translationService = (function () {
           //   /\<a\si\=[0-9]+\>[^\<\>]*(?=\<\/a\>)/g
           // );
 
+          // google返回的翻译结果为了通顺, HTML节点顺序会跟原始HTML节点顺序不一样. 
+          // 可以选择重新排序,不按照google返回的顺序, 而是按照原始HTML节点顺序显示,更符合原有的样式.但是这样可能会不通顺例如"what is the <b>treatment</b> for stroke",会被翻译成"是什么<b>治疗方法</b>中风的"
           if (dontSortResults) {
             // Should not sort the <a i={number}> of Google Translate result
             // Instead of it, join the texts without sorting
@@ -875,9 +908,9 @@ const translationService = (function () {
           const lang = response.lang;
           const detectedLanguage = lang ? lang.split("-")[0] : null;
           return response.text.map(
-            /** @return {Service_Single_Result_Response} */ (
+            /** @return {Service_Single_Result_Response} */(
               /** @type {string} */ text
-            ) => ({ text, detectedLanguage })
+          ) => ({ text, detectedLanguage })
           );
         },
         function cbTransformResponse(result, dontSortResults) {
@@ -890,11 +923,10 @@ const translationService = (function () {
           targetLanguage,
           requests
         ) {
-          return `&id=${YandexHelper.translateSid}-0-0&format=html&lang=${
-            sourceLanguage === "auto" ? "" : sourceLanguage + "-"
-          }${targetLanguage}${requests
-            .map((info) => `&text=${encodeURIComponent(info.originalText)}`)
-            .join("")}`;
+          return `&id=${YandexHelper.translateSid}-0-0&format=html&lang=${sourceLanguage === "auto" ? "" : sourceLanguage + "-"
+            }${targetLanguage}${requests
+              .map((info) => `&text=${encodeURIComponent(info.originalText)}`)
+              .join("")}`;
         },
         function cbGetRequestBody(sourceLanguage, targetLanguage, requests) {
           return undefined;
@@ -1129,7 +1161,7 @@ const translationService = (function () {
   serviceList.set("bing", bingService);
   serviceList.set(
     "deepl",
-    /** @type {Service} */ /** @type {?} */ (deeplService)
+    /** @type {Service} */ /** @type {?} */(deeplService)
   );
 
   /**
@@ -1151,6 +1183,7 @@ const translationService = (function () {
     dontSaveInPersistentCache = false,
     dontSortResults = false
   ) => {
+
     serviceName = twpLang.getAlternativeService(
       targetLanguage,
       serviceName,
@@ -1182,6 +1215,7 @@ const translationService = (function () {
     sourceArray,
     dontSaveInPersistentCache = false
   ) => {
+
     serviceName = twpLang.getAlternativeService(
       targetLanguage,
       serviceName,
@@ -1192,7 +1226,7 @@ const translationService = (function () {
       await service.translate(
         sourceLanguage,
         targetLanguage,
-        [sourceArray],
+        [sourceArray], // sourceArray放入数组内,从而构成一个二维数组
         dontSaveInPersistentCache
       )
     )[0];
@@ -1214,6 +1248,7 @@ const translationService = (function () {
     originalText,
     dontSaveInPersistentCache = false
   ) => {
+
     serviceName = twpLang.getAlternativeService(
       targetLanguage,
       serviceName,
@@ -1224,7 +1259,7 @@ const translationService = (function () {
       await service.translate(
         sourceLanguage,
         targetLanguage,
-        [[originalText]],
+        [[originalText]], // 文本装入二维数组
         dontSaveInPersistentCache
       )
     )[0][0];

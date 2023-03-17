@@ -563,7 +563,7 @@ twpConfig.onReady(() => {
       let themeColorAttention = null;
 
       // 根据当前浏览器的theme更新themeColorFieldText和themeColorAttention, 然后更新所有tab的图标
-      if (browser.theme) {
+      if (typeof browser !== "undefined" && browser?.theme) {
         browser.theme.getCurrent().then((theme) => {
           themeColorFieldText = null;
           themeColorAttention = null;

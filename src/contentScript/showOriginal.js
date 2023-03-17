@@ -6,9 +6,9 @@
 
 /**
  * @type {{
- *  enable:()=>void,
+ *  enable:(boolean)=>void,
  *  disable:()=>void,
- *  add:()=>void,
+ *  add:(Node)=>void,
  *  removeAll:()=>void,
  *  enabledObserverSubscribe:(Function)=>void
  *  isEnabled:boolean

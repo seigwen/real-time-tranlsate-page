@@ -886,21 +886,22 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
               translated += restResults.join(" ");
             }
 
-            // ??
             const originalTextNode = nodes[j];
+
+            // "悬停显示原文"已开启
             if (showOriginal.isEnabled) {
+              // 把文本节点用font标签包裹
               nodes[j] = encapsulateTextNode(nodes[j]);
               showOriginal.add(nodes[j]);
             }
 
+            // 把节点存储起来, 用于恢复
             const toRestore = {
-              node: nodes[j],
-              original: originalTextNode,
-              originalText: originalTextNode.textContent,
-              translatedText: translated,
+              node: nodes[j],  // 文本节点(在"悬停显示原文"已开启的情况下,是包裹后文本节点,否则为原始文本节点)
+              original: originalTextNode,  // 原始文本节点
+              originalText: originalTextNode.textContent, // 原始文本
+              translatedText: translated,  // 翻译后文本
             };
-
-            // 把旧节点存储起来, 用于恢复
             nodesToRestore.push(toRestore);
 
             // 处理自定义翻译
@@ -910,7 +911,8 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
               currentPageTranslatorService,
               currentTargetLanguage
             ).then((results) => {
-              // 把翻译结果放入节点
+              // 把文本节点的文本的值赋为翻译后文本
+              // nodes[j].textContent = results;
               nodes[j].textContent = results;
               toRestore.translatedText = results;
             });
@@ -930,14 +932,13 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
               showOriginal.add(nodes[j]);
             }
 
+            // 把旧节点存储起来, 用于恢复
             const toRestore = {
               node: nodes[j],
               original: originalTextNode,
               originalText: originalTextNode.textContent,
               translatedText: translated,
             };
-
-            // 把旧节点存储起来, 用于恢复
             nodesToRestore.push(toRestore);
 
             // 处理自定义翻译
@@ -947,9 +948,9 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
               currentPageTranslatorService,
               currentTargetLanguage
             ).then((results) => {
-              // 把翻译结果放入节点
+              // 把文本节点的文本的值赋为翻译后文本
+              // nodes[j].textContent = results;
               nodes[j].textContent = results;
-              // 把自定义翻译结果更新到toRestore.translatedText
               toRestore.translatedText = results;
             });
           }
@@ -1071,7 +1072,6 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
                 pageLanguageState === "translated" &&
                 currentFooCount === fooCount
               ) {
-                console.log("piecesToTranslateNow",piecesToTranslateNow)
                 console.log("translated results:", results)
 
                 // 把节点文本替换为翻译后的节点文本
@@ -1143,7 +1143,7 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     fooCount++;
     // 恢复原来页面
     pageTranslator.restorePage();
-    // 允许显示原文字
+    // 开启悬停显示原文字
     showOriginal.enable();
     // 删除错误翻译
     chrome.runtime.sendMessage({ action: "removeTranslationsWithError" });
@@ -1187,7 +1187,7 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
     fooCount++;
     piecesToTranslate = [];
 
-    // 禁止显示原文字(因为已经是原始页面了)
+    // 禁止悬停显示原文字(因为已经是原始页面了)
     showOriginal.disable();
 
     // 禁止监听节点变化
@@ -1300,6 +1300,8 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
   });
 
   // Requests the detection of the tab language in the background
+
+  // 主帧
   if (window.self === window.top) {
     // is main frame
     const onTabVisible = function () {
@@ -1369,6 +1371,7 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
         }
       );
     };
+    // 监听主页面可视性, 设置可视性变更的回调
     setTimeout(function () {
       if (document.visibilityState == "visible") {
         onTabVisible();
@@ -1389,7 +1392,9 @@ Promise.all([twpConfig.onReady(), getTabHostName()]).then(function (_) {
         );
       }
     }, 120);
-  } else {
+  } 
+  // 非主帧
+  else {
     // is subframe (iframe)
     chrome.runtime.sendMessage(
       {
